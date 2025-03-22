@@ -1,11 +1,12 @@
-const md5 = require('md5');
-const User = require('../models/user.model');
-const ForgotPassword = require('../models/forgot-password.model');
-const generateHelper = require("../../../helpers/generate.js");
-const sendMailHelper = require("../../../helpers/sendMail.js");
+import { Request, Response } from 'express';
+import md5 from 'md5';
+import User from '../models/user.model';
+import ForgotPassword from '../models/forgot-password.model';
+import generateHelper from "../../helpers/generate";
+import sendMailHelper from "../../helpers/sendMail";
 
 // [POST] /api/v1/users/register
-module.exports.register = async (req, res) => {
+export const register = async (req: Request, res: Response): Promise<void> => {
     req.body.password = md5(req.body.password);
 
     const existEmail = await User.findOne({
@@ -14,33 +15,31 @@ module.exports.register = async (req, res) => {
     });
 
     if (existEmail) {
-        return res.json({
+        res.json({
             code: 400,
             message: "Email already exists"
         });
-    } else{
+    } else {
         const user = new User({
             fullName: req.body.fullName,
             email: req.body.email,
             password: req.body.password,
             token: generateHelper.generalRandomString(30)
         });
-        user.save();
+        await user.save();
 
         const token = user.token;
         res.cookie("token", token);
-        return res.json({
+        res.json({
             code: 200,
             message: "Register success",
             token: token
         });
-
-
     }
-}
+};
 
 // [POST] /api/v1/users/login
-module.exports.login = async (req, res) => {
+export const login = async (req: Request, res: Response): Promise<void> => {
     const email = req.body.email;
     const password = md5(req.body.password);
 
@@ -77,7 +76,7 @@ module.exports.login = async (req, res) => {
 };
 
 // [POST] /api/v1/users/password/forgot
-module.exports.forgotPassword = async (req, res) => {
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
     const email = req.body.email;
 
     const user = await User.findOne({
@@ -95,13 +94,13 @@ module.exports.forgotPassword = async (req, res) => {
 
     const otp = generateHelper.generalRandomString(8);
 
-    const timeExpire = 5
+    const timeExpire = 5;
 
     //save data to database
     const objectForgotPassword = {
         email: email,
         otp: otp,
-        expireAt: Date.now() + timeExpire * 60
+        expireAt: new Date(Date.now() + timeExpire * 60 * 1000)
     };
 
     const forgotPassword = new ForgotPassword(objectForgotPassword);
@@ -112,15 +111,14 @@ module.exports.forgotPassword = async (req, res) => {
     const html = `<h1>Your OTP is: ${otp}</h1> <p>OTP will expire in ${timeExpire} minutes</p>`;
     sendMailHelper.sendMail(email, subject, html);
 
-
     res.json({
         code: 200,
         message: "Forgot password success"
     });
-}
+};
     
 // [POST] /api/v1/users/password/otp
-module.exports.otpPassword = async (req, res) => {
+export const otpPassword = async (req: Request, res: Response): Promise<void> => {
     const email = req.body.email;
     const otp = req.body.otp;
 
@@ -141,6 +139,14 @@ module.exports.otpPassword = async (req, res) => {
         email: email
     });
 
+    if (!user) {
+        res.json({
+            code: 400,
+            message: "User not found"
+        });
+        return;
+    }
+
     const token = user.token;
     res.cookie("token", token);
 
@@ -148,11 +154,11 @@ module.exports.otpPassword = async (req, res) => {
         code: 200,
         message: "OTP is correct",
         token: token
-    })
-}
+    });
+};
 
 // [POST] /api/v1/users/password/reset
-module.exports.resetPassword = async (req, res) => {
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
     const token = req.cookies.token;
     const password = md5(req.body.password);
 
@@ -160,7 +166,15 @@ module.exports.resetPassword = async (req, res) => {
         token: token
     });
 
-    if(password === user.password) {
+    if (!user) {
+        res.json({
+            code: 400,
+            message: "User not found"
+        });
+        return;
+    }
+
+    if (password === user.password) {
         res.json({
             code: 400,
             message: "New password must be different from old password"
@@ -172,16 +186,16 @@ module.exports.resetPassword = async (req, res) => {
         token: token,
     }, {
         password: password
-    })
+    });
 
     res.json({
         code: 200,
         message: "Reset password success"
-    })
+    });
 };
 
 // [GET] /api/v1/users/detail
-module.exports.detail = async (req, res) => {
+export const detail = async (req: Request, res: Response): Promise<void> => {
     const token = req.cookies.token;
 
     const user = await User.findOne({
@@ -194,10 +208,10 @@ module.exports.detail = async (req, res) => {
         message: "Get user detail success",
         info: user
     });
-}
+};
 
 // [GET] /api/v1/users/list
-module.exports.list = async (req, res) => {
+export const list = async (req: Request, res: Response): Promise<void> => {
     const users = await User.find({
         deleted: false
     }).select("fullName email");
@@ -207,4 +221,14 @@ module.exports.list = async (req, res) => {
         message: "Get list user success",
         users: users
     });
-}
+};
+
+export default {
+    register,
+    login,
+    forgotPassword,
+    otpPassword,
+    resetPassword,
+    detail,
+    list
+}; 

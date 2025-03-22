@@ -5,7 +5,7 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import routeApiVer1 from './api/v1/routes/index.route';
+import routeApiVer1 from './api/routes/index.route';
 
 dotenv.config();
 database.connect();

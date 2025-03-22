@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Task from '../models/task.model';
-import paginationHelper from "../../../helpers/pagination";
-import searchHelper from "../../../helpers/search";
+import paginationHelper from "../../helpers/pagination";
+import searchHelper from "../../helpers/search";
 
 interface TaskQuery {
     status?: string;
